@@ -1,0 +1,444 @@
+import { useState } from "react";
+
+const defaultCards = [
+  { id: 1, question: "What is Ohm's Law?", answer: "V = IR, where V is voltage, I is current, and R is resistance." },
+  { id: 2, question: "What is the unit of electric charge?", answer: "Coulomb (C)" },
+  { id: 3, question: "What is Kirchhoff's Voltage Law (KVL)?", answer: "The sum of all voltages around any closed loop in a circuit equals zero." },
+  { id: 4, question: "What is the difference between AC and DC?", answer: "DC (Direct Current) flows in one direction. AC (Alternating Current) periodically reverses direction." },
+  { id: 5, question: "What is a capacitor?", answer: "A component that stores electrical energy in an electric field between two conductive plates." },
+  { id: 6, question: "What does IoT stand for?", answer: "Internet of Things — a network of physical devices connected to the internet to collect and share data." },
+];
+
+let nextId = 7;
+
+const ACCENT = "#6c63ff";
+const ACCENT2 = "#ff6584";
+
+export default function App() {
+  const [cards, setCards] = useState(defaultCards);
+  const [index, setIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [view, setView] = useState("quiz"); // quiz | manage | form
+  const [editCard, setEditCard] = useState(null);
+  const [form, setForm] = useState({ question: "", answer: "" });
+  const [animDir, setAnimDir] = useState(null);
+  const [visible, setVisible] = useState(true);
+
+  const current = cards[index];
+
+  const navigate = (dir) => {
+    if (!visible) return;
+    setAnimDir(dir);
+    setVisible(false);
+    setTimeout(() => {
+      setFlipped(false);
+      setIndex(prev => {
+        if (dir === "next") return (prev + 1) % cards.length;
+        return (prev - 1 + cards.length) % cards.length;
+      });
+      setVisible(true);
+      setAnimDir(null);
+    }, 300);
+  };
+
+  const openAdd = () => {
+    setEditCard(null);
+    setForm({ question: "", answer: "" });
+    setView("form");
+  };
+
+  const openEdit = (card) => {
+    setEditCard(card);
+    setForm({ question: card.question, answer: card.answer });
+    setView("form");
+  };
+
+  const saveForm = () => {
+    if (!form.question.trim() || !form.answer.trim()) return;
+    if (editCard) {
+      setCards(prev => prev.map(c => c.id === editCard.id ? { ...c, ...form } : c));
+    } else {
+      setCards(prev => [...prev, { id: nextId++, ...form }]);
+    }
+    setView("manage");
+  };
+
+  const deleteCard = (id) => {
+    setCards(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      if (index >= updated.length) setIndex(Math.max(0, updated.length - 1));
+      return updated;
+    });
+  };
+
+  const goQuiz = () => {
+    setFlipped(false);
+    setIndex(0);
+    setView("quiz");
+  };
+
+  // ── Styles ──
+  const S = {
+    root: {
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      fontFamily: "'Segoe UI', Arial, sans-serif",
+      padding: "16px",
+      boxSizing: "border-box",
+    },
+    header: {
+      width: "100%",
+      maxWidth: "680px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "28px",
+      paddingTop: "8px",
+    },
+    logo: { color: "#fff", fontSize: "20px", fontWeight: "700", letterSpacing: "0.5px" },
+    logoSpan: { color: ACCENT },
+    navBtns: { display: "flex", gap: "10px" },
+    navBtn: (active) => ({
+      padding: "8px 18px",
+      borderRadius: "20px",
+      border: active ? "none" : "1px solid rgba(255,255,255,0.2)",
+      background: active ? ACCENT : "transparent",
+      color: "#fff",
+      fontSize: "13px",
+      fontWeight: active ? "700" : "400",
+      cursor: "pointer",
+      transition: "all 0.2s",
+    }),
+    // Quiz view
+    counter: {
+      color: "rgba(255,255,255,0.45)",
+      fontSize: "13px",
+      letterSpacing: "2px",
+      marginBottom: "20px",
+      textTransform: "uppercase",
+    },
+    cardWrap: {
+      width: "100%",
+      maxWidth: "620px",
+      perspective: "1200px",
+      marginBottom: "28px",
+    },
+    cardInner: (flipped, visible, dir) => ({
+      position: "relative",
+      width: "100%",
+      minHeight: "280px",
+      transformStyle: "preserve-3d",
+      transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+      transition: "transform 0.55s cubic-bezier(.4,2,.6,1)",
+      opacity: visible ? 1 : 0,
+      translateY: visible ? "0px" : "20px",
+      transitionProperty: "transform, opacity",
+      cursor: "pointer",
+    }),
+    cardFace: (back) => ({
+      position: back ? "absolute" : "relative",
+      top: 0, left: 0,
+      width: "100%",
+      minHeight: "280px",
+      backfaceVisibility: "hidden",
+      WebkitBackfaceVisibility: "hidden",
+      transform: back ? "rotateY(180deg)" : "rotateY(0deg)",
+      background: back
+        ? `linear-gradient(135deg, ${ACCENT}22, ${ACCENT2}22)`
+        : "rgba(255,255,255,0.06)",
+      backdropFilter: "blur(12px)",
+      border: back
+        ? `1.5px solid ${ACCENT}66`
+        : "1.5px solid rgba(255,255,255,0.1)",
+      borderRadius: "20px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "36px 32px",
+      boxSizing: "border-box",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+    }),
+    cardLabel: (back) => ({
+      fontSize: "11px",
+      letterSpacing: "3px",
+      textTransform: "uppercase",
+      color: back ? ACCENT : "rgba(255,255,255,0.35)",
+      marginBottom: "20px",
+      fontWeight: "600",
+    }),
+    cardText: {
+      color: "#fff",
+      fontSize: "clamp(17px, 2.5vw, 22px)",
+      textAlign: "center",
+      lineHeight: "1.6",
+      fontWeight: "400",
+    },
+    cardHint: {
+      marginTop: "24px",
+      fontSize: "12px",
+      color: "rgba(255,255,255,0.3)",
+      letterSpacing: "1px",
+    },
+    // Nav arrows
+    navRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "20px",
+      marginBottom: "20px",
+    },
+    arrow: (disabled) => ({
+      width: "48px", height: "48px",
+      borderRadius: "50%",
+      border: "1.5px solid rgba(255,255,255,0.2)",
+      background: "rgba(255,255,255,0.05)",
+      color: disabled ? "rgba(255,255,255,0.2)" : "#fff",
+      fontSize: "20px",
+      cursor: disabled ? "default" : "pointer",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      transition: "all 0.2s",
+    }),
+    showBtn: {
+      padding: "13px 36px",
+      background: ACCENT,
+      color: "#fff",
+      border: "none",
+      borderRadius: "30px",
+      fontSize: "15px",
+      fontWeight: "700",
+      cursor: "pointer",
+      letterSpacing: "0.5px",
+      boxShadow: `0 4px 20px ${ACCENT}55`,
+    },
+    // Manage view
+    manageWrap: {
+      width: "100%",
+      maxWidth: "680px",
+    },
+    manageHeader: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "20px",
+    },
+    manageTitle: { color: "#fff", fontSize: "20px", fontWeight: "700" },
+    addBtn: {
+      padding: "10px 22px",
+      background: ACCENT,
+      color: "#fff",
+      border: "none",
+      borderRadius: "20px",
+      fontSize: "14px",
+      fontWeight: "700",
+      cursor: "pointer",
+    },
+    manageCard: {
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: "14px",
+      padding: "18px 20px",
+      marginBottom: "12px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: "12px",
+    },
+    manageQ: { color: "#fff", fontSize: "15px", fontWeight: "600", marginBottom: "4px" },
+    manageA: { color: "rgba(255,255,255,0.5)", fontSize: "13px", lineHeight: "1.5" },
+    iconBtn: (color) => ({
+      padding: "8px 14px",
+      background: "transparent",
+      border: `1px solid ${color}55`,
+      borderRadius: "10px",
+      color: color,
+      fontSize: "13px",
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+      transition: "background 0.2s",
+    }),
+    // Form view
+    formWrap: {
+      width: "100%",
+      maxWidth: "560px",
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: "20px",
+      padding: "32px",
+      boxSizing: "border-box",
+    },
+    formTitle: { color: "#fff", fontSize: "20px", fontWeight: "700", marginBottom: "24px" },
+    label: { color: "rgba(255,255,255,0.6)", fontSize: "13px", letterSpacing: "1px", textTransform: "uppercase", marginBottom: "8px", display: "block" },
+    input: {
+      width: "100%",
+      padding: "13px 16px",
+      background: "rgba(255,255,255,0.07)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: "12px",
+      color: "#fff",
+      fontSize: "15px",
+      boxSizing: "border-box",
+      marginBottom: "20px",
+      outline: "none",
+      fontFamily: "inherit",
+      resize: "vertical",
+    },
+    formBtns: { display: "flex", gap: "12px", marginTop: "8px" },
+    saveBtn: {
+      flex: 1,
+      padding: "13px",
+      background: ACCENT,
+      color: "#fff",
+      border: "none",
+      borderRadius: "12px",
+      fontSize: "15px",
+      fontWeight: "700",
+      cursor: "pointer",
+    },
+    cancelBtn: {
+      flex: 1,
+      padding: "13px",
+      background: "rgba(255,255,255,0.07)",
+      color: "rgba(255,255,255,0.7)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: "12px",
+      fontSize: "15px",
+      cursor: "pointer",
+    },
+    empty: {
+      color: "rgba(255,255,255,0.35)",
+      textAlign: "center",
+      padding: "40px",
+      fontSize: "15px",
+    },
+  };
+
+  return (
+    <div style={S.root}>
+      {/* Header */}
+      <div style={S.header}>
+        <div style={S.logo}>Flash<span style={S.logoSpan}>Cards</span></div>
+        <div style={S.navBtns}>
+          <button style={S.navBtn(view === "quiz")} onClick={goQuiz}>📖 Quiz</button>
+          <button style={S.navBtn(view === "manage" || view === "form")} onClick={() => setView("manage")}>⚙️ Manage</button>
+        </div>
+      </div>
+
+      {/* ── QUIZ VIEW ── */}
+      {view === "quiz" && (
+        <>
+          {cards.length === 0 ? (
+            <div style={S.empty}>No flashcards yet.<br />Go to Manage to add some!</div>
+          ) : (
+            <>
+              <div style={S.counter}>Card {index + 1} of {cards.length}</div>
+
+              <div style={S.cardWrap} onClick={() => setFlipped(f => !f)}>
+                <div style={S.cardInner(flipped, visible, animDir)}>
+                  {/* Front */}
+                  <div style={S.cardFace(false)}>
+                    <div style={S.cardLabel(false)}>Question</div>
+                    <div style={S.cardText}>{current.question}</div>
+                    <div style={S.cardHint}>Tap to reveal answer</div>
+                  </div>
+                  {/* Back */}
+                  <div style={S.cardFace(true)}>
+                    <div style={S.cardLabel(true)}>Answer</div>
+                    <div style={S.cardText}>{current.answer}</div>
+                    <div style={S.cardHint}>Tap to flip back</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div style={S.navRow}>
+                <button style={S.arrow(cards.length <= 1)} onClick={() => navigate("prev")}>‹</button>
+                <button style={S.showBtn} onClick={() => setFlipped(f => !f)}>
+                  {flipped ? "Hide Answer" : "Show Answer"}
+                </button>
+                <button style={S.arrow(cards.length <= 1)} onClick={() => navigate("next")}>›</button>
+              </div>
+
+              {/* Progress dots */}
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "center", maxWidth: "300px" }}>
+                {cards.map((_, i) => (
+                  <div key={i} onClick={() => { setFlipped(false); setIndex(i); }} style={{
+                    width: "8px", height: "8px",
+                    borderRadius: "50%",
+                    background: i === index ? ACCENT : "rgba(255,255,255,0.2)",
+                    cursor: "pointer",
+                    transition: "background 0.3s",
+                  }} />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── MANAGE VIEW ── */}
+      {view === "manage" && (
+        <div style={S.manageWrap}>
+          <div style={S.manageHeader}>
+            <div style={S.manageTitle}>My Flashcards ({cards.length})</div>
+            <button style={S.addBtn} onClick={openAdd}>+ Add Card</button>
+          </div>
+
+          {cards.length === 0 && <div style={S.empty}>No cards yet. Add one!</div>}
+
+          {cards.map(card => (
+            <div key={card.id} style={S.manageCard}>
+              <div style={{ flex: 1 }}>
+                <div style={S.manageQ}>Q: {card.question}</div>
+                <div style={S.manageA}>A: {card.answer}</div>
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                <button style={S.iconBtn(ACCENT)} onClick={() => openEdit(card)}>✏️ Edit</button>
+                <button style={S.iconBtn(ACCENT2)} onClick={() => deleteCard(card.id)}>🗑️ Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── FORM VIEW ── */}
+      {view === "form" && (
+        <div style={S.formWrap}>
+          <div style={S.formTitle}>{editCard ? "Edit Flashcard" : "Add New Flashcard"}</div>
+
+          <label style={S.label}>Question</label>
+          <textarea
+            rows={3}
+            style={S.input}
+            placeholder="Enter your question..."
+            value={form.question}
+            onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
+          />
+
+          <label style={S.label}>Answer</label>
+          <textarea
+            rows={3}
+            style={S.input}
+            placeholder="Enter the answer..."
+            value={form.answer}
+            onChange={e => setForm(f => ({ ...f, answer: e.target.value }))}
+          />
+
+          <div style={S.formBtns}>
+            <button style={S.saveBtn} onClick={saveForm}>
+              {editCard ? "Save Changes" : "Add Card"}
+            </button>
+            <button style={S.cancelBtn} onClick={() => setView("manage")}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <p style={{ color: "rgba(255,255,255,0.15)", fontSize: "11px", marginTop: "32px", letterSpacing: "1px" }}>
+        CodeAlpha Internship · Task 1
+      </p>
+    </div>
+  );
+}
